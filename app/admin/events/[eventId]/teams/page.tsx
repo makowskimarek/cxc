@@ -29,16 +29,25 @@ interface Team {
 }
 
 function SortableTeamItem({ team, onRemove }: { team: Team; onRemove: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: team.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: team.id });
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="flex items-center gap-3 p-4 rounded-lg border-2 border-primary bg-primary/5"
+      {...attributes}
     >
       <button
-        {...attributes}
+        ref={setActivatorNodeRef}
         {...listeners}
         className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-1 -ml-1 shrink-0"
         tabIndex={-1}
