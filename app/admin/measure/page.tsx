@@ -20,6 +20,15 @@ interface Team {
   name: string;
 }
 
+interface EventData {
+  id: string;
+  name: string;
+  date: string | null;
+  location: string | null;
+  competitions: Competition[];
+  teams: Team[];
+}
+
 interface Athlete {
   id: string;
   name: string;
@@ -28,18 +37,12 @@ interface Athlete {
   teamName: string | null;
 }
 
-interface EventData {
-  id: string;
-  name: string;
-  competitions: Competition[];
-  teams: Team[];
-}
-
 interface AthleteStop {
   elapsedMs: number;
   editValue: string;
 }
 
+type Tab = "events" | "measure";
 type SetupStep = "competition" | "team";
 type Phase = "setup" | "ready" | "running" | "points_entry" | "review";
 
@@ -70,27 +73,21 @@ export default function MeasurePage() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [activeTab, setActiveTab] = useState<Tab>("events");
   const [selectedEventId, setSelectedEventId] = useState("");
   const [selectedCompId, setSelectedCompId] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [setupStep, setSetupStep] = useState<SetupStep>("competition");
   const [phase, setPhase] = useState<Phase>("setup");
 
-  // Shared stopwatch
   const [elapsed, setElapsed] = useState(0);
   const startedAt = useRef<number | null>(null);
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Per-athlete stops (for per_athlete + time)
   const [athleteStops, setAthleteStops] = useState<Record<string, AthleteStop>>({});
-
-  // Points inputs
   const [pointsInputs, setPointsInputs] = useState<Record<string, string>>({});
   const [teamInput, setTeamInput] = useState("");
-
-  // Review (per_team + time)
   const [reviewValue, setReviewValue] = useState("");
-
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -101,16 +98,21 @@ export default function MeasurePage() {
       })
       .then((data) => {
         setEvents(data);
-        const savedEvent = localStorage.getItem(LS_EVENT);
-        const savedComp = localStorage.getItem(LS_COMP);
-        let eventId = "";
-        if (data.length === 1) eventId = data[0].id;
-        else if (savedEvent && data.find((e) => e.id === savedEvent)) eventId = savedEvent;
-        if (eventId) {
-          setSelectedEventId(eventId);
-          const ev = data.find((e) => e.id === eventId)!;
-          const comp = ev.competitions.find((c) => c.id === savedComp) ?? ev.competitions[0];
+        const savedEventId = localStorage.getItem(LS_EVENT);
+        const savedCompId = localStorage.getItem(LS_COMP);
+
+        const matchedEvent = data.find((e) => e.id === savedEventId);
+        if (matchedEvent) {
+          setSelectedEventId(matchedEvent.id);
+          const comp = matchedEvent.competitions.find((c) => c.id === savedCompId) ?? matchedEvent.competitions[0];
           if (comp) setSelectedCompId(comp.id);
+          setActiveTab("measure");
+        } else if (data.length === 1) {
+          setSelectedEventId(data[0].id);
+          if (data[0].competitions[0]) setSelectedCompId(data[0].competitions[0].id);
+          setActiveTab("measure");
+        } else {
+          setActiveTab("events");
         }
       })
       .catch(() => toast.error("Nie udało się załadować danych. Odśwież stronę."))
@@ -125,15 +127,24 @@ export default function MeasurePage() {
       .catch(() => {});
   }, [selectedEventId]);
 
+  function selectEvent(eventId: string) {
+    const ev = events.find((e) => e.id === eventId)!;
+    setSelectedEventId(eventId);
+    const firstComp = ev.competitions[0];
+    if (firstComp) setSelectedCompId(firstComp.id);
+    localStorage.setItem(LS_EVENT, eventId);
+    if (firstComp) localStorage.setItem(LS_COMP, firstComp.id);
+    resetAll();
+    setSetupStep("competition");
+    setPhase("setup");
+    setActiveTab("measure");
+    toast.success(`Wybrano: ${ev.name}`);
+  }
+
   const selectedEvent = events.find((e) => e.id === selectedEventId);
   const selectedComp = selectedEvent?.competitions.find((c) => c.id === selectedCompId);
   const selectedTeam = selectedEvent?.teams.find((t) => t.id === selectedTeamId);
   const teamAthletes = athletes.filter((a) => a.teamId === selectedTeamId);
-
-  function saveSelections() {
-    localStorage.setItem(LS_EVENT, selectedEventId);
-    localStorage.setItem(LS_COMP, selectedCompId);
-  }
 
   function stopTicker() {
     if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
@@ -160,14 +171,14 @@ export default function MeasurePage() {
   }
 
   function handleStart() {
-    saveSelections();
+    localStorage.setItem(LS_COMP, selectedCompId);
     resetAll();
     startTimer();
     setPhase("running");
   }
 
   function handleReadyClick() {
-    saveSelections();
+    localStorage.setItem(LS_COMP, selectedCompId);
     if (selectedComp?.scoreType === "time") {
       setPhase("ready");
     } else {
@@ -175,7 +186,6 @@ export default function MeasurePage() {
     }
   }
 
-  // Per-athlete: stop individual athlete
   function stopAthlete(athleteId: string) {
     const ms = Date.now() - startedAt.current!;
     setAthleteStops((prev) => ({
@@ -184,7 +194,6 @@ export default function MeasurePage() {
     }));
   }
 
-  // Per-athlete + time: save all at once
   async function saveAllAthletesTimes() {
     for (const athlete of teamAthletes) {
       const stop = athleteStops[athlete.id];
@@ -212,7 +221,6 @@ export default function MeasurePage() {
     goToSetup("team");
   }
 
-  // Per-team + time: STOP
   function handleTeamStop() {
     stopTicker();
     const secs = Math.round((Date.now() - startedAt.current!) / 1000);
@@ -220,7 +228,6 @@ export default function MeasurePage() {
     setPhase("review");
   }
 
-  // Per-team + time: save in review
   async function saveTeamTime() {
     const parsed = parseMMSS(reviewValue);
     if (parsed === null) { toast.error("Zły format czasu (M:SS)"); return; }
@@ -239,7 +246,6 @@ export default function MeasurePage() {
     }
   }
 
-  // Per-athlete + points: save all
   async function saveAllPoints() {
     setSubmitting(true);
     let saved = 0;
@@ -260,7 +266,6 @@ export default function MeasurePage() {
     goToSetup("team");
   }
 
-  // Per-team + points: save
   async function saveTeamPoints() {
     const pts = parseInt(teamInput);
     if (isNaN(pts)) { toast.error("Wpisz liczbę"); return; }
@@ -281,370 +286,375 @@ export default function MeasurePage() {
 
   const allAthletesStopped = teamAthletes.length > 0 && teamAthletes.every((a) => athleteStops[a.id]);
 
-  // ─── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Ładowanie…</div>;
   }
 
-  if (events.length === 0) {
+  // ─── Full-screen phases (no header/tabs) ──────────────────────────────────
+  if (phase === "running" && selectedComp?.measureMode === "per_team") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 text-center">
-        <div>
-          <p className="text-2xl font-bold mb-2">Brak aktywnych zawodów</p>
-          <p className="text-muted-foreground text-sm">Poproś administratora o aktywowanie zawodów i przypisanie Cię jako sędziego.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── SETUP ────────────────────────────────────────────────────────────────
-  if (phase === "setup") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 border-b bg-card sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-black">⏱ Pomiar</h1>
-            {selectedComp && (
-              <Badge variant="outline" className="font-mono">
-                {selectedComp.displayOrder}. {selectedComp.name}
-              </Badge>
-            )}
-          </div>
+      <div className="min-h-screen bg-black text-white flex flex-col select-none">
+        <header className="px-5 py-4 border-b border-white/20">
+          <h2 className="font-bold text-lg">{selectedComp?.name}</h2>
+          <p className="text-white/60">{selectedTeam?.name}</p>
         </header>
-
-        <div className="flex-1 overflow-auto p-5 space-y-6 max-w-lg mx-auto w-full pb-28">
-
-          {/* STEP: Competition */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                1. Konkurencja
-              </label>
-              {setupStep !== "competition" && selectedComp && (
-                <button onClick={() => setSetupStep("competition")} className="text-xs text-primary underline">
-                  Zmień
-                </button>
-              )}
-            </div>
-
-            {setupStep === "competition" ? (
-              <div className="space-y-2">
-                {events.length > 1 && (
-                  <div className="mb-4 space-y-1">
-                    <p className="text-xs text-muted-foreground mb-2">Zawody:</p>
-                    {events.map((ev) => (
-                      <button key={ev.id} onClick={() => { setSelectedEventId(ev.id); setSelectedCompId(""); }}
-                        className={`w-full text-left px-3 py-2 rounded-lg border-2 text-sm ${selectedEventId === ev.id ? "border-primary bg-primary/5 font-semibold" : "border-border"}`}>
-                        {ev.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {selectedEvent?.competitions.map((comp) => (
-                  <button
-                    key={comp.id}
-                    onClick={() => { setSelectedCompId(comp.id); setSetupStep("team"); setSelectedTeamId(""); }}
-                    className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-colors ${selectedCompId === comp.id ? "border-primary bg-primary/5 font-semibold" : "border-border"}`}
-                  >
-                    <span className="text-muted-foreground text-sm mr-2">{comp.displayOrder}.</span>
-                    {comp.name}
-                    <span className="ml-2 text-sm">{comp.scoreType === "time" ? "⏱" : "🏆"}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">{comp.measureMode === "per_team" ? "· drużyna" : ""}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-3 rounded-xl bg-muted/50 font-semibold">
-                {selectedComp?.displayOrder}. {selectedComp?.name}
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  {selectedComp?.scoreType === "time" ? "⏱ Czas" : "🏆 Punkty"}
-                  {selectedComp?.measureMode === "per_team" ? " · drużyna" : ""}
-                </span>
-              </div>
-            )}
-          </section>
-
-          {/* STEP: Team */}
-          {setupStep === "team" && selectedEvent && (
-            <section>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
-                2. Drużyna
-              </label>
-              <div className="space-y-2">
-                {selectedEvent.teams.map((team) => (
-                  <button
-                    key={team.id}
-                    onClick={() => setSelectedTeamId(team.id)}
-                    className={`w-full text-left px-4 py-4 rounded-xl border-2 transition-colors text-lg font-medium ${selectedTeamId === team.id ? "border-primary bg-primary/5" : "border-border"}`}
-                  >
-                    {team.name}
-                    {selectedTeamId === team.id && <span className="float-right text-primary">✓</span>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        {setupStep === "team" && selectedTeamId && selectedComp && (
-          <div className="fixed bottom-0 left-0 right-0 p-5 bg-card border-t max-w-lg mx-auto">
-            <Button
-              className="w-full h-14 text-lg font-bold"
-              onClick={handleReadyClick}
-            >
-              {selectedComp.scoreType === "time" ? "Gotowy → Start pomiaru" : "Gotowy → Wpisz wyniki"}
-            </Button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-6">
+          <div className="text-[4.5rem] md:text-[7rem] font-mono font-black tabular-nums leading-none">
+            {formatElapsed(elapsed)}
           </div>
-        )}
-      </div>
-    );
-  }
-
-  // ─── READY (czas, oba tryby) ───────────────────────────────────────────────
-  if (phase === "ready") {
-    const isPerTeam = selectedComp?.measureMode === "per_team";
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 border-b bg-card">
-          <button onClick={() => goToSetup("team")} className="text-sm text-muted-foreground mb-1">← Wróć</button>
-          <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
-          <p className="text-muted-foreground">{selectedTeam?.name}</p>
-          {!isPerTeam && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {teamAthletes.length} zawodników · jeden start, osobne stoopy
-            </p>
-          )}
-        </header>
-
-        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-8">
-          <div className="text-8xl font-mono font-black tabular-nums text-muted-foreground/30">0:00.0</div>
-          <p className="text-muted-foreground text-center">
-            {isPerTeam ? "Naciśnij START gdy drużyna ruszy" : "Naciśnij START gdy drużyna ruszy — zatrzymasz każdego zawodnika osobno"}
-          </p>
-          <Button
-            className="w-full max-w-sm h-24 text-3xl font-black bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-lg"
-            onClick={handleStart}
-          >
-            START
+          <div className="flex items-center gap-2 text-red-400">
+            <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm">Pomiar w toku</span>
+          </div>
+        </div>
+        <div className="p-6 space-y-3">
+          <Button className="w-full h-24 text-3xl font-black bg-red-600 hover:bg-red-700 text-white rounded-2xl shadow-lg" onClick={handleTeamStop}>
+            STOP
           </Button>
+          <button onClick={() => { stopTicker(); goToSetup("team"); }} className="w-full text-center text-white/30 text-sm py-3">
+            Anuluj
+          </button>
         </div>
       </div>
     );
   }
 
-  // ─── RUNNING (czas) ────────────────────────────────────────────────────────
-  if (phase === "running") {
-    const isPerTeam = selectedComp?.measureMode === "per_team";
+  // ─── Layout with header + tabs ─────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
 
-    // Per-team: jedna czarna strona z STOP
-    if (isPerTeam) {
-      return (
-        <div className="min-h-screen bg-black text-white flex flex-col select-none">
-          <header className="px-5 py-4 border-b border-white/20">
-            <h2 className="font-bold text-lg">{selectedComp?.name}</h2>
-            <p className="text-white/60">{selectedTeam?.name}</p>
-          </header>
-          <div className="flex-1 flex flex-col items-center justify-center gap-6">
-            <div className="text-[4.5rem] md:text-[7rem] font-mono font-black tabular-nums leading-none">
-              {formatElapsed(elapsed)}
-            </div>
-            <div className="flex items-center gap-2 text-red-400">
-              <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-sm">Pomiar w toku</span>
-            </div>
-          </div>
-          <div className="p-6 space-y-3">
-            <Button
-              className="w-full h-24 text-3xl font-black bg-red-600 hover:bg-red-700 text-white rounded-2xl shadow-lg"
-              onClick={handleTeamStop}
+      {/* Header */}
+      <header className="px-5 py-3 border-b bg-card sticky top-0 z-10">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-black">⏱ Pomiar</h1>
+          {selectedEvent && (
+            <button
+              onClick={() => setActiveTab("events")}
+              className="text-xs text-muted-foreground border rounded-full px-3 py-1 hover:bg-muted transition-colors truncate max-w-[180px]"
             >
-              STOP
-            </Button>
-            <button onClick={() => { stopTicker(); goToSetup("team"); }} className="w-full text-center text-white/30 text-sm py-3">
-              Anuluj
+              {selectedEvent.name}
             </button>
-          </div>
+          )}
         </div>
-      );
-    }
 
-    // Per-athlete: timer + lista zawodników z osobnymi STOP
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 border-b bg-card sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">{selectedComp?.name} · {selectedTeam?.name}</p>
-              <div className="text-3xl font-mono font-black tabular-nums">{formatElapsed(elapsed)}</div>
-            </div>
-            <div className="flex items-center gap-2 text-red-500">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs font-medium">LIVE</span>
-            </div>
-          </div>
-        </header>
+        {/* Tabs */}
+        <div className="flex gap-1 mt-3">
+          <button
+            onClick={() => setActiveTab("events")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "events" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Zawody
+          </button>
+          <button
+            onClick={() => { if (selectedEventId) setActiveTab("measure"); }}
+            disabled={!selectedEventId}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "measure"
+                ? "bg-primary text-primary-foreground"
+                : selectedEventId
+                ? "text-muted-foreground hover:bg-muted"
+                : "text-muted-foreground/40 cursor-not-allowed"
+            }`}
+          >
+            Pomiar
+          </button>
+        </div>
+      </header>
 
-        <div className="flex-1 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full pb-36">
-          {teamAthletes.map((athlete) => {
-            const stop = athleteStops[athlete.id];
-            if (stop) {
-              return (
-                <div key={athlete.id} className="px-4 py-4 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/20 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
-                      <span className="font-semibold text-lg">{athlete.name}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">zatrzymany</span>
-                  </div>
-                  <Input
-                    className="font-mono text-center h-11"
-                    value={stop.editValue}
-                    onChange={(e) => setAthleteStops((prev) => ({ ...prev, [athlete.id]: { ...prev[athlete.id], editValue: e.target.value } }))}
-                    inputMode="text"
-                    placeholder="M:SS"
-                  />
-                </div>
-              );
-            }
+      {/* ─── TAB: Zawody ──────────────────────────────────────────────────────── */}
+      {activeTab === "events" && (
+        <div className="flex-1 p-5 max-w-lg mx-auto w-full space-y-3">
+          {events.length === 0 && (
+            <div className="text-center py-16">
+              <p className="text-2xl font-bold mb-2">Brak dostępnych zawodów</p>
+              <p className="text-muted-foreground text-sm">Poproś administratora o aktywowanie zawodów i przypisanie Cię jako sędziego.</p>
+            </div>
+          )}
+          {events.map((ev) => {
+            const isSelected = ev.id === selectedEventId;
             return (
-              <div key={athlete.id} className="flex items-center justify-between px-4 py-4 rounded-xl border-2 border-border">
-                <div>
-                  {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
-                  <span className="font-medium text-lg">{athlete.name}</span>
+              <button
+                key={ev.id}
+                onClick={() => selectEvent(ev.id)}
+                className={`w-full text-left p-4 rounded-xl border-2 transition-colors ${
+                  isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-base">{ev.name}</div>
+                    <div className="text-sm text-muted-foreground mt-0.5 space-x-3">
+                      {ev.date && <span>📅 {ev.date}</span>}
+                      {ev.location && <span>📍 {ev.location}</span>}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {ev.competitions.length} konkurencji · {ev.teams.length} drużyn
+                    </div>
+                  </div>
+                  {isSelected
+                    ? <Badge className="bg-primary text-primary-foreground shrink-0">Aktywne</Badge>
+                    : <span className="text-sm text-primary font-medium shrink-0">Wybierz →</span>
+                  }
                 </div>
-                <Button
-                  size="sm"
-                  className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white font-bold"
-                  onClick={() => stopAthlete(athlete.id)}
-                >
-                  STOP
-                </Button>
-              </div>
+              </button>
             );
           })}
         </div>
+      )}
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t max-w-lg mx-auto space-y-2">
-          {allAthletesStopped ? (
-            <Button
-              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white"
-              onClick={saveAllAthletesTimes}
-              disabled={submitting}
-            >
-              {submitting ? "Zapisywanie…" : `✓ Zapisz wszystkich (${teamAthletes.length})`}
-            </Button>
-          ) : (
-            <p className="text-center text-sm text-muted-foreground py-1">
-              Pozostało: {teamAthletes.filter((a) => !athleteStops[a.id]).length} zawodników
-            </p>
-          )}
-          <button onClick={() => { stopTicker(); goToSetup("team"); }} className="w-full text-center text-muted-foreground text-sm py-1">
-            Anuluj — wróć do wyboru drużyny
-          </button>
-        </div>
-      </div>
-    );
-  }
+      {/* ─── TAB: Pomiar ──────────────────────────────────────────────────────── */}
+      {activeTab === "measure" && (
+        <>
+          {/* SETUP */}
+          {phase === "setup" && (
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 overflow-auto p-5 space-y-6 max-w-lg mx-auto w-full pb-28">
 
-  // ─── REVIEW (per_team + time) ──────────────────────────────────────────────
-  if (phase === "review") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 border-b bg-card">
-          <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
-          <p className="text-muted-foreground">{selectedTeam?.name}</p>
-        </header>
-        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-8">
-          <p className="text-sm text-muted-foreground uppercase tracking-widest">Wynik drużyny</p>
-          <div className="text-7xl font-mono font-black tabular-nums">{reviewValue}</div>
-          <div className="w-full max-w-xs space-y-1.5">
-            <label className="text-sm text-muted-foreground">Popraw jeśli potrzeba (format M:SS)</label>
-            <Input
-              className="text-center text-2xl font-mono h-14"
-              value={reviewValue}
-              onChange={(e) => setReviewValue(e.target.value)}
-              inputMode="text"
-              placeholder="0:00"
-            />
-          </div>
-        </div>
-        <div className="p-5 border-t bg-card space-y-3 max-w-lg mx-auto w-full">
-          <Button
-            className="w-full h-16 text-xl font-black bg-green-600 hover:bg-green-700 text-white rounded-2xl"
-            onClick={saveTeamTime}
-            disabled={submitting || !reviewValue.trim()}
-          >
-            {submitting ? "Zapisywanie…" : "✓ Wyślij wynik"}
-          </Button>
-          <Button variant="outline" className="w-full h-12 rounded-xl" onClick={() => { resetAll(); startTimer(); setPhase("running"); }} disabled={submitting}>
-            Zmierz ponownie
-          </Button>
-          <button onClick={() => goToSetup("team")} className="w-full text-center text-muted-foreground text-sm py-2" disabled={submitting}>
-            Anuluj — wróć do wyboru drużyny
-          </button>
-        </div>
-      </div>
-    );
-  }
+                {/* Competition */}
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      1. Konkurencja
+                    </label>
+                    {setupStep !== "competition" && selectedComp && (
+                      <button onClick={() => setSetupStep("competition")} className="text-xs text-primary underline">
+                        Zmień
+                      </button>
+                    )}
+                  </div>
 
-  // ─── POINTS ENTRY ─────────────────────────────────────────────────────────
-  if (phase === "points_entry") {
-    const isPerTeam = selectedComp?.measureMode === "per_team";
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="px-5 py-4 border-b bg-card">
-          <button onClick={() => goToSetup("team")} className="text-sm text-muted-foreground mb-1">← Wróć</button>
-          <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
-          <p className="text-muted-foreground">{selectedTeam?.name}</p>
-        </header>
+                  {setupStep === "competition" ? (
+                    <div className="space-y-2">
+                      {selectedEvent?.competitions.map((comp) => (
+                        <button
+                          key={comp.id}
+                          onClick={() => { setSelectedCompId(comp.id); setSetupStep("team"); setSelectedTeamId(""); }}
+                          className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-colors ${
+                            selectedCompId === comp.id ? "border-primary bg-primary/5 font-semibold" : "border-border"
+                          }`}
+                        >
+                          <span className="text-muted-foreground text-sm mr-2">{comp.displayOrder}.</span>
+                          {comp.name}
+                          <span className="ml-2 text-sm">{comp.scoreType === "time" ? "⏱" : "🏆"}</span>
+                          <span className="ml-1 text-xs text-muted-foreground">{comp.measureMode === "per_team" ? "· drużyna" : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 rounded-xl bg-muted/50 font-semibold">
+                      {selectedComp?.displayOrder}. {selectedComp?.name}
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {selectedComp?.scoreType === "time" ? "⏱ Czas" : "🏆 Punkty"}
+                        {selectedComp?.measureMode === "per_team" ? " · drużyna" : ""}
+                      </span>
+                    </div>
+                  )}
+                </section>
 
-        <div className="flex-1 overflow-auto p-5 space-y-3 max-w-lg mx-auto w-full pb-28">
-          {isPerTeam ? (
-            <div className="space-y-4 py-8">
-              <label className="text-sm text-muted-foreground block text-center">Wynik drużyny (punkty)</label>
-              <Input
-                className="text-center text-4xl font-mono h-20"
-                type="number"
-                inputMode="numeric"
-                value={teamInput}
-                onChange={(e) => setTeamInput(e.target.value)}
-                placeholder="0"
-                autoFocus
-              />
-            </div>
-          ) : (
-            teamAthletes.map((athlete) => (
-              <div key={athlete.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border">
-                <div className="flex-1">
-                  {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
-                  <span className="font-medium">{athlete.name}</span>
-                </div>
-                <Input
-                  className="w-24 text-center font-mono h-10"
-                  type="number"
-                  inputMode="numeric"
-                  value={pointsInputs[athlete.id] ?? ""}
-                  onChange={(e) => setPointsInputs((prev) => ({ ...prev, [athlete.id]: e.target.value }))}
-                  placeholder="pkt"
-                />
+                {/* Team */}
+                {setupStep === "team" && selectedEvent && (
+                  <section>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
+                      2. Drużyna
+                    </label>
+                    <div className="space-y-2">
+                      {selectedEvent.teams.map((team) => (
+                        <button
+                          key={team.id}
+                          onClick={() => setSelectedTeamId(team.id)}
+                          className={`w-full text-left px-4 py-4 rounded-xl border-2 transition-colors text-lg font-medium ${
+                            selectedTeamId === team.id ? "border-primary bg-primary/5" : "border-border"
+                          }`}
+                        >
+                          {team.name}
+                          {selectedTeamId === team.id && <span className="float-right text-primary">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
-            ))
+
+              {setupStep === "team" && selectedTeamId && selectedComp && (
+                <div className="fixed bottom-0 left-0 right-0 p-5 bg-card border-t max-w-lg mx-auto">
+                  <Button className="w-full h-14 text-lg font-bold" onClick={handleReadyClick}>
+                    {selectedComp.scoreType === "time" ? "Gotowy → Start pomiaru" : "Gotowy → Wpisz wyniki"}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
-        </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-5 bg-card border-t max-w-lg mx-auto space-y-2">
-          <Button
-            className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white"
-            onClick={isPerTeam ? saveTeamPoints : saveAllPoints}
-            disabled={submitting || (isPerTeam ? !teamInput.trim() : teamAthletes.every((a) => !pointsInputs[a.id]?.trim()))}
-          >
-            {submitting ? "Zapisywanie…" : "✓ Zapisz wyniki"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+          {/* READY */}
+          {phase === "ready" && (
+            <div className="flex-1 flex flex-col">
+              <div className="px-5 py-4 border-b bg-card">
+                <button onClick={() => goToSetup("team")} className="text-sm text-muted-foreground mb-1">← Wróć</button>
+                <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
+                <p className="text-muted-foreground">{selectedTeam?.name}</p>
+                {selectedComp?.measureMode !== "per_team" && (
+                  <p className="text-xs text-muted-foreground mt-1">{teamAthletes.length} zawodników · jeden start, osobne stopy</p>
+                )}
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-8">
+                <div className="text-8xl font-mono font-black tabular-nums text-muted-foreground/30">0:00.0</div>
+                <p className="text-muted-foreground text-center">
+                  {selectedComp?.measureMode === "per_team"
+                    ? "Naciśnij START gdy drużyna ruszy"
+                    : "Naciśnij START gdy drużyna ruszy — zatrzymasz każdego zawodnika osobno"}
+                </p>
+                <Button className="w-full max-w-sm h-24 text-3xl font-black bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-lg" onClick={handleStart}>
+                  START
+                </Button>
+              </div>
+            </div>
+          )}
 
-  return null;
+          {/* RUNNING per_athlete */}
+          {phase === "running" && selectedComp?.measureMode === "per_athlete" && (
+            <div className="flex-1 flex flex-col">
+              <header className="px-5 py-4 border-b bg-card sticky top-[89px] z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{selectedComp?.name} · {selectedTeam?.name}</p>
+                    <div className="text-3xl font-mono font-black tabular-nums">{formatElapsed(elapsed)}</div>
+                  </div>
+                  <div className="flex items-center gap-2 text-red-500">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-xs font-medium">LIVE</span>
+                  </div>
+                </div>
+              </header>
+              <div className="flex-1 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full pb-36">
+                {teamAthletes.map((athlete) => {
+                  const stop = athleteStops[athlete.id];
+                  if (stop) {
+                    return (
+                      <div key={athlete.id} className="px-4 py-4 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
+                            <span className="font-semibold text-lg">{athlete.name}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">zatrzymany</span>
+                        </div>
+                        <Input
+                          className="font-mono text-center h-11"
+                          value={stop.editValue}
+                          onChange={(e) => setAthleteStops((prev) => ({ ...prev, [athlete.id]: { ...prev[athlete.id], editValue: e.target.value } }))}
+                          inputMode="text"
+                          placeholder="M:SS"
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={athlete.id} className="flex items-center justify-between px-4 py-4 rounded-xl border-2 border-border">
+                      <div>
+                        {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
+                        <span className="font-medium text-lg">{athlete.name}</span>
+                      </div>
+                      <Button size="sm" className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white font-bold" onClick={() => stopAthlete(athlete.id)}>
+                        STOP
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t max-w-lg mx-auto space-y-2">
+                {allAthletesStopped ? (
+                  <Button className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white" onClick={saveAllAthletesTimes} disabled={submitting}>
+                    {submitting ? "Zapisywanie…" : `✓ Zapisz wszystkich (${teamAthletes.length})`}
+                  </Button>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-1">
+                    Pozostało: {teamAthletes.filter((a) => !athleteStops[a.id]).length} zawodników
+                  </p>
+                )}
+                <button onClick={() => { stopTicker(); goToSetup("team"); }} className="w-full text-center text-muted-foreground text-sm py-1">
+                  Anuluj — wróć do wyboru drużyny
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* REVIEW */}
+          {phase === "review" && (
+            <div className="flex-1 flex flex-col">
+              <div className="px-5 py-4 border-b bg-card">
+                <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
+                <p className="text-muted-foreground">{selectedTeam?.name}</p>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center p-8 gap-8">
+                <p className="text-sm text-muted-foreground uppercase tracking-widest">Wynik drużyny</p>
+                <div className="text-7xl font-mono font-black tabular-nums">{reviewValue}</div>
+                <div className="w-full max-w-xs space-y-1.5">
+                  <label className="text-sm text-muted-foreground">Popraw jeśli potrzeba (format M:SS)</label>
+                  <Input className="text-center text-2xl font-mono h-14" value={reviewValue} onChange={(e) => setReviewValue(e.target.value)} inputMode="text" placeholder="0:00" />
+                </div>
+              </div>
+              <div className="p-5 border-t bg-card space-y-3 max-w-lg mx-auto w-full">
+                <Button className="w-full h-16 text-xl font-black bg-green-600 hover:bg-green-700 text-white rounded-2xl" onClick={saveTeamTime} disabled={submitting || !reviewValue.trim()}>
+                  {submitting ? "Zapisywanie…" : "✓ Wyślij wynik"}
+                </Button>
+                <Button variant="outline" className="w-full h-12 rounded-xl" onClick={() => { resetAll(); startTimer(); setPhase("running"); }} disabled={submitting}>
+                  Zmierz ponownie
+                </Button>
+                <button onClick={() => goToSetup("team")} className="w-full text-center text-muted-foreground text-sm py-2" disabled={submitting}>
+                  Anuluj — wróć do wyboru drużyny
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* POINTS ENTRY */}
+          {phase === "points_entry" && (
+            <div className="flex-1 flex flex-col">
+              <div className="px-5 py-4 border-b bg-card">
+                <button onClick={() => goToSetup("team")} className="text-sm text-muted-foreground mb-1">← Wróć</button>
+                <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
+                <p className="text-muted-foreground">{selectedTeam?.name}</p>
+              </div>
+              <div className="flex-1 overflow-auto p-5 space-y-3 max-w-lg mx-auto w-full pb-28">
+                {selectedComp?.measureMode === "per_team" ? (
+                  <div className="space-y-4 py-8">
+                    <label className="text-sm text-muted-foreground block text-center">Wynik drużyny (punkty)</label>
+                    <Input className="text-center text-4xl font-mono h-20" type="number" inputMode="numeric" value={teamInput} onChange={(e) => setTeamInput(e.target.value)} placeholder="0" autoFocus />
+                  </div>
+                ) : (
+                  teamAthletes.map((athlete) => (
+                    <div key={athlete.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border">
+                      <div className="flex-1">
+                        {athlete.number != null && <span className="text-muted-foreground text-sm mr-2">#{athlete.number}</span>}
+                        <span className="font-medium">{athlete.name}</span>
+                      </div>
+                      <Input
+                        className="w-24 text-center font-mono h-10"
+                        type="number"
+                        inputMode="numeric"
+                        value={pointsInputs[athlete.id] ?? ""}
+                        onChange={(e) => setPointsInputs((prev) => ({ ...prev, [athlete.id]: e.target.value }))}
+                        placeholder="pkt"
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="fixed bottom-0 left-0 right-0 p-5 bg-card border-t max-w-lg mx-auto space-y-2">
+                <Button
+                  className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white"
+                  onClick={selectedComp?.measureMode === "per_team" ? saveTeamPoints : saveAllPoints}
+                  disabled={submitting || (selectedComp?.measureMode === "per_team" ? !teamInput.trim() : teamAthletes.every((a) => !pointsInputs[a.id]?.trim()))}
+                >
+                  {submitting ? "Zapisywanie…" : "✓ Zapisz wyniki"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
