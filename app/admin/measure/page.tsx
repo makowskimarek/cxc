@@ -293,7 +293,7 @@ export default function MeasurePage() {
   // ─── Full-screen phases (no header/tabs) ──────────────────────────────────
   if (phase === "running" && selectedComp?.measureMode === "per_team") {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col select-none">
+      <div className="h-[calc(100vh-3.5rem)] md:h-screen bg-black text-white flex flex-col select-none overflow-hidden">
         <header className="px-5 py-4 border-b border-white/20">
           <h2 className="font-bold text-lg">{selectedComp?.name}</h2>
           <p className="text-white/60">{selectedTeam?.name}</p>
@@ -321,7 +321,7 @@ export default function MeasurePage() {
 
   // ─── Layout with header + tabs ─────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[calc(100vh-3.5rem)] md:min-h-screen bg-background flex flex-col">
 
       {/* Header */}
       <header className="px-5 py-3 border-b bg-card sticky top-0 z-10">
@@ -514,8 +514,8 @@ export default function MeasurePage() {
 
           {/* RUNNING per_athlete */}
           {phase === "running" && selectedComp?.measureMode === "per_athlete" && (
-            <div className="flex-1 flex flex-col">
-              <header className="px-5 py-4 border-b bg-card sticky top-[89px] z-10">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <header className="px-5 py-4 border-b bg-card shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">{selectedComp?.name} · {selectedTeam?.name}</p>
@@ -527,7 +527,7 @@ export default function MeasurePage() {
                   </div>
                 </div>
               </header>
-              <div className="flex-1 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full pb-36">
+              <div className="flex-1 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full">
                 {teamAthletes.map((athlete) => {
                   const stop = athleteStops[athlete.id];
                   if (stop) {
@@ -563,7 +563,7 @@ export default function MeasurePage() {
                   );
                 })}
               </div>
-              <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t max-w-lg mx-auto space-y-2">
+              <div className="shrink-0 p-4 bg-card border-t max-w-lg mx-auto w-full space-y-2">
                 {allAthletesStopped ? (
                   <Button className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white" onClick={saveAllAthletesTimes} disabled={submitting}>
                     {submitting ? "Zapisywanie…" : `✓ Zapisz wszystkich (${teamAthletes.length})`}
