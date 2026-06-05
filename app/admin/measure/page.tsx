@@ -89,6 +89,8 @@ export default function MeasurePage() {
   const [teamInput, setTeamInput] = useState("");
   const [reviewValue, setReviewValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [existingResults, setExistingResults] = useState<Array<{ teamId: string | null; athleteId: string | null; competitionId: string }>>([]);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
 
   useEffect(() => {
     fetch("/api/measure/events")
@@ -121,11 +123,22 @@ export default function MeasurePage() {
 
   useEffect(() => {
     if (!selectedEventId) return;
-    fetch(`/api/events/${selectedEventId}/athletes`)
-      .then((r) => r.json() as Promise<Athlete[]>)
-      .then(setAthletes)
-      .catch(() => {});
+    Promise.all([
+      fetch(`/api/events/${selectedEventId}/athletes`).then((r) => r.json() as Promise<Athlete[]>),
+      fetch(`/api/events/${selectedEventId}/results`).then((r) => r.json()),
+    ]).then(([athletesData, resultsData]) => {
+      setAthletes(athletesData);
+      setExistingResults(resultsData);
+    }).catch(() => {});
   }, [selectedEventId]);
+
+  function reloadResults() {
+    if (!selectedEventId) return;
+    fetch(`/api/events/${selectedEventId}/results`)
+      .then((r) => r.json())
+      .then(setExistingResults)
+      .catch(() => {});
+  }
 
   function selectEvent(eventId: string) {
     const ev = events.find((e) => e.id === eventId)!;
@@ -170,6 +183,29 @@ export default function MeasurePage() {
     setPhase("setup");
   }
 
+  function teamHasResult(teamId: string): boolean {
+    if (!selectedCompId) return false;
+    const comp = selectedEvent?.competitions.find((c) => c.id === selectedCompId);
+    if (!comp) return false;
+    if (comp.measureMode === "per_team") {
+      return existingResults.some(
+        (r) => r.teamId === teamId && r.competitionId === selectedCompId && r.athleteId === null
+      );
+    }
+    const teamAthleteIds = athletes.filter((a) => a.teamId === teamId).map((a) => a.id);
+    return existingResults.some(
+      (r) => r.athleteId !== null && teamAthleteIds.includes(r.athleteId) && r.competitionId === selectedCompId
+    );
+  }
+
+  function proceedReady() {
+    if (selectedComp?.scoreType === "time") {
+      setPhase("ready");
+    } else {
+      setPhase("points_entry");
+    }
+  }
+
   function handleStart() {
     localStorage.setItem(LS_COMP, selectedCompId);
     resetAll();
@@ -179,11 +215,11 @@ export default function MeasurePage() {
 
   function handleReadyClick() {
     localStorage.setItem(LS_COMP, selectedCompId);
-    if (selectedComp?.scoreType === "time") {
-      setPhase("ready");
-    } else {
-      setPhase("points_entry");
+    if (teamHasResult(selectedTeamId)) {
+      setShowOverwriteConfirm(true);
+      return;
     }
+    proceedReady();
   }
 
   function stopAthlete(athleteId: string) {
@@ -218,6 +254,7 @@ export default function MeasurePage() {
     }
     setSubmitting(false);
     toast.success(`Zapisano ${saved} wyników`);
+    reloadResults();
     goToSetup("team");
   }
 
@@ -240,6 +277,7 @@ export default function MeasurePage() {
     setSubmitting(false);
     if (r.ok) {
       toast.success(`✓ ${selectedTeam?.name} — ${secondsToMMSS(parsed)}`);
+      reloadResults();
       goToSetup("team");
     } else {
       toast.error("Błąd zapisu");
@@ -263,6 +301,7 @@ export default function MeasurePage() {
     }
     setSubmitting(false);
     toast.success(`Zapisano ${saved} wyników`);
+    reloadResults();
     goToSetup("team");
   }
 
@@ -278,6 +317,7 @@ export default function MeasurePage() {
     setSubmitting(false);
     if (r.ok) {
       toast.success(`✓ ${selectedTeam?.name} — ${pts} pkt`);
+      reloadResults();
       goToSetup("team");
     } else {
       toast.error("Błąd zapisu");
@@ -436,18 +476,29 @@ export default function MeasurePage() {
                       2. Drużyna
                     </label>
                     <div className="space-y-2">
-                      {selectedEvent.teams.map((team) => (
-                        <button
-                          key={team.id}
-                          onClick={() => setSelectedTeamId(team.id)}
-                          className={`w-full text-left px-4 py-4 rounded-xl border-2 transition-colors text-lg font-medium ${
-                            selectedTeamId === team.id ? "border-primary bg-primary/5" : "border-border"
-                          }`}
-                        >
-                          {team.name}
-                          {selectedTeamId === team.id && <span className="float-right text-primary">✓</span>}
-                        </button>
-                      ))}
+                      {selectedEvent.teams.map((team) => {
+                        const hasResult = teamHasResult(team.id);
+                        const isSelected = selectedTeamId === team.id;
+                        return (
+                          <button
+                            key={team.id}
+                            onClick={() => setSelectedTeamId(team.id)}
+                            className={`w-full text-left px-4 py-4 rounded-xl border-2 transition-colors text-lg font-medium ${
+                              isSelected
+                                ? "border-primary bg-primary/5"
+                                : hasResult
+                                  ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                                  : "border-border"
+                            }`}
+                          >
+                            <span>{team.name}</span>
+                            {isSelected && <span className="float-right text-primary">✓</span>}
+                            {!isSelected && hasResult && (
+                              <span className="float-right text-green-600 dark:text-green-400 text-sm font-normal">wynik ✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
@@ -630,6 +681,31 @@ export default function MeasurePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Potwierdzenie nadpisania wyniku */}
+      {showOverwriteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end">
+          <div className="bg-card w-full rounded-t-2xl p-6 space-y-4 max-w-lg mx-auto shadow-2xl">
+            <h3 className="font-bold text-xl">Drużyna ma już wynik</h3>
+            <p className="text-muted-foreground">
+              <strong>{selectedTeam?.name}</strong> ma już zapisany wynik w konkurencji <strong>{selectedComp?.name}</strong>. Czy na pewno chcesz wykonać pomiar ponownie i nadpisać wynik?
+            </p>
+            <Button
+              className="w-full h-14 text-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl"
+              onClick={() => { setShowOverwriteConfirm(false); proceedReady(); }}
+            >
+              Tak, zmierz ponownie
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 rounded-xl"
+              onClick={() => setShowOverwriteConfirm(false)}
+            >
+              Anuluj
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

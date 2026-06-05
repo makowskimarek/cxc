@@ -202,7 +202,7 @@ export default function ResultsPage({ params }: Props) {
                   <div className="px-4 py-2 bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {teamName}
                   </div>
-                  <div className="px-4 py-4 flex items-center gap-3">
+                  <div className={`px-4 py-4 flex items-center gap-3 ${teamResult ? "bg-green-50 dark:bg-green-950/20" : ""}`}>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-base">Wynik drużyny</div>
                       {currentDisplay && (
@@ -244,7 +244,7 @@ export default function ResultsPage({ params }: Props) {
                   const currentDisplay = formatResult(athleteResult, selectedComp);
                   const key = inputKey(athlete.id, selectedComp.competitionId);
                   return (
-                    <div key={athlete.id} className="px-4 py-4 flex items-center gap-3">
+                    <div key={athlete.id} className={`px-4 py-4 flex items-center gap-3 ${athleteResult ? "bg-green-50 dark:bg-green-950/20" : ""}`}>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-base">
                           {athlete.number && <span className="text-muted-foreground mr-2">#{athlete.number}</span>}
