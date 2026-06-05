@@ -493,9 +493,6 @@ export default function MeasurePage() {
                           >
                             <span>{team.name}</span>
                             {isSelected && <span className="float-right text-primary">✓</span>}
-                            {!isSelected && hasResult && (
-                              <span className="float-right text-green-600 dark:text-green-400 text-sm font-normal">wynik ✓</span>
-                            )}
                           </button>
                         );
                       })}
