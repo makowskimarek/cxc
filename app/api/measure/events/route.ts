@@ -54,7 +54,7 @@ export async function GET() {
           .from(eventTeams)
           .innerJoin(teams, eq(eventTeams.teamId, teams.id))
           .where(eq(eventTeams.eventId, event.id))
-          .orderBy(teams.name);
+          .orderBy(eventTeams.displayOrder, teams.name);
 
         return { ...event, competitions: comps, teams: teamRows };
       })

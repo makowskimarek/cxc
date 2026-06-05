@@ -99,6 +99,7 @@ export const eventTeams = pgTable(
     teamId: uuid("team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
+    displayOrder: integer("display_order").notNull().default(0),
   },
   (t) => [
     primaryKey({ columns: [t.eventId, t.teamId] }),
