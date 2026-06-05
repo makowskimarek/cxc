@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -65,17 +65,17 @@ export default function AthletesPage() {
       body: JSON.stringify(body),
     });
     if (r.ok) { toast.success("Zapisano"); setOpen(false); load(); }
-    else toast.error("BĹ‚Ä…d zapisu");
+    else toast.error("Błąd zapisu");
   }
 
   async function remove(id: string) {
-    if (!confirm("UsunÄ…Ä‡ zawodnika?")) return;
+    if (!confirm("Usunąć zawodnika?")) return;
     await fetch(`/api/athletes?id=${id}`, { method: "DELETE" });
-    toast.success("UsuniÄ™to"); load();
+    toast.success("Usunięto"); load();
   }
 
   const byTeam = athletes.reduce<Record<string, Athlete[]>>((acc, a) => {
-    const key = a.teamName ?? "Brak druĹĽyny";
+    const key = a.teamName ?? "Brak drużyny";
     if (!acc[key]) acc[key] = [];
     acc[key].push(a);
     return acc;
@@ -86,7 +86,7 @@ export default function AthletesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Zawodnicy</h1>
-          <p className="text-muted-foreground text-sm mt-1">{athletes.length} zawodnikĂłw</p>
+          <p className="text-muted-foreground text-sm mt-1">{athletes.length} zawodników</p>
         </div>
         <Button onClick={openCreate}>+ Nowy zawodnik</Button>
       </div>
@@ -100,19 +100,19 @@ export default function AthletesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-16">#</TableHead>
-                    <TableHead>ImiÄ™ i nazwisko</TableHead>
+                    <TableHead>Imię i nazwisko</TableHead>
                     <TableHead className="w-32 text-right">Akcje</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {teamAthletes.map((a) => (
                     <TableRow key={a.id}>
-                      <TableCell className="text-muted-foreground">{a.number ?? "â€”"}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.number ?? "—"}</TableCell>
                       <TableCell className="font-medium">{a.name}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" size="sm" onClick={() => openEdit(a)}>Edytuj</Button>
-                          <Button variant="destructive" size="sm" onClick={() => remove(a.id)}>UsuĹ„</Button>
+                          <Button variant="destructive" size="sm" onClick={() => remove(a.id)}>Usuń</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -122,7 +122,7 @@ export default function AthletesPage() {
             </div>
           </div>
         ))}
-        {athletes.length === 0 && <p className="text-center text-muted-foreground py-12">Brak zawodnikĂłw.</p>}
+        {athletes.length === 0 && <p className="text-center text-muted-foreground py-12">Brak zawodników.</p>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -130,7 +130,7 @@ export default function AthletesPage() {
           <DialogHeader><DialogTitle>{editing ? "Edytuj zawodnika" : "Nowy zawodnik"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label>ImiÄ™ i nazwisko</Label>
+              <Label>Imię i nazwisko</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-1">
@@ -138,9 +138,9 @@ export default function AthletesPage() {
               <Input type="number" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <Label>DruĹĽyna</Label>
+              <Label>Drużyna</Label>
               <Select value={form.teamId} onValueChange={(v) => setForm({ ...form, teamId: v ?? "" })}>
-                <SelectTrigger><SelectValue placeholder="Wybierz druĹĽynÄ™" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Wybierz drużynę" /></SelectTrigger>
                 <SelectContent>
                   {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
@@ -156,4 +156,3 @@ export default function AthletesPage() {
     </div>
   );
 }
-

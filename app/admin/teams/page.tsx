@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -46,23 +46,23 @@ export default function TeamsPage() {
       body: JSON.stringify(body),
     });
     if (r.ok) { toast.success("Zapisano"); setOpen(false); load(); }
-    else toast.error("BĹ‚Ä…d zapisu");
+    else toast.error("Błąd zapisu");
   }
 
   async function remove(id: string) {
-    if (!confirm("UsunÄ…Ä‡ druĹĽynÄ™? Spowoduje to usuniÄ™cie zawodnikĂłw z tej druĹĽyny.")) return;
+    if (!confirm("Usunąć drużynę? Spowoduje to usunięcie zawodników z tej drużyny.")) return;
     await fetch(`/api/teams?id=${id}`, { method: "DELETE" });
-    toast.success("UsuniÄ™to"); load();
+    toast.success("Usunięto"); load();
   }
 
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">DruĹĽyny</h1>
-          <p className="text-muted-foreground text-sm mt-1">{teams.length} druĹĽyn</p>
+          <h1 className="text-2xl font-bold">Drużyny</h1>
+          <p className="text-muted-foreground text-sm mt-1">{teams.length} drużyn</p>
         </div>
-        <Button onClick={openCreate}>+ Nowa druĹĽyna</Button>
+        <Button onClick={openCreate}>+ Nowa drużyna</Button>
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
@@ -78,26 +78,26 @@ export default function TeamsPage() {
             {teams.map((t) => (
               <TableRow key={t.id}>
                 <TableCell className="font-medium">{t.name}</TableCell>
-                <TableCell className="text-muted-foreground text-sm truncate max-w-xs">{t.logoUrl ?? "â€”"}</TableCell>
+                <TableCell className="text-muted-foreground text-sm truncate max-w-xs">{t.logoUrl ?? "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEdit(t)}>Edytuj</Button>
-                    <Button variant="destructive" size="sm" onClick={() => remove(t.id)}>UsuĹ„</Button>
+                    <Button variant="destructive" size="sm" onClick={() => remove(t.id)}>Usuń</Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        {teams.length === 0 && <p className="text-center text-muted-foreground py-12">Brak druĹĽyn.</p>}
+        {teams.length === 0 && <p className="text-center text-muted-foreground py-12">Brak drużyn.</p>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editing ? "Edytuj druĹĽynÄ™" : "Nowa druĹĽyna"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Edytuj drużynę" : "Nowa drużyna"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label>Nazwa druĹĽyny</Label>
+              <Label>Nazwa drużyny</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-1">
@@ -114,4 +114,3 @@ export default function TeamsPage() {
     </div>
   );
 }
-

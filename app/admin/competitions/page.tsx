@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,22 +45,20 @@ export default function CompetitionsAdminPage() {
   }
 
   async function save() {
-    const body = editing
-      ? { ...form, id: editing.id }
-      : form;
+    const body = editing ? { ...form, id: editing.id } : form;
     const r = await fetch("/api/competitions", {
       method: editing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (r.ok) { toast.success("Zapisano"); setOpen(false); load(); }
-    else toast.error("BĹ‚Ä…d zapisu");
+    else toast.error("Błąd zapisu");
   }
 
   async function remove(id: string) {
-    if (!confirm("UsunÄ…Ä‡ konkurencjÄ™? Spowoduje to usuniÄ™cie wszystkich wynikĂłw tej konkurencji.")) return;
+    if (!confirm("Usunąć konkurencję? Spowoduje to usunięcie wszystkich wyników tej konkurencji.")) return;
     await fetch(`/api/competitions?id=${id}`, { method: "DELETE" });
-    toast.success("UsuniÄ™to"); load();
+    toast.success("Usunięto"); load();
   }
 
   return (
@@ -68,7 +66,7 @@ export default function CompetitionsAdminPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Konkurencje</h1>
-          <p className="text-muted-foreground text-sm mt-1">Globalne szablony konkurencji uĹĽywane w zawodach</p>
+          <p className="text-muted-foreground text-sm mt-1">Globalne szablony konkurencji używane w zawodach</p>
         </div>
         <Button onClick={openCreate}>+ Nowa konkurencja</Button>
       </div>
@@ -90,15 +88,15 @@ export default function CompetitionsAdminPage() {
                 <TableCell className="font-medium">{c.name}</TableCell>
                 <TableCell>
                   <Badge variant={c.scoreType === "time" ? "secondary" : "default"}>
-                    {c.scoreType === "time" ? (c.lowerIsBetter ? "âŹ± Czas (min)" : "âŹ± Czas (max)") : "đźŹ† Punkty"}
+                    {c.scoreType === "time" ? (c.lowerIsBetter ? "⏱ Czas (min)" : "⏱ Czas (max)") : "🏆 Punkty"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">{c.measureMode === "per_team" ? "druĹĽyna" : "zawodnik"}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{c.videoUrl ? "âś“" : "â€”"}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{c.measureMode === "per_team" ? "drużyna" : "zawodnik"}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{c.videoUrl ? "✓" : "—"}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEdit(c)}>Edytuj</Button>
-                    <Button variant="destructive" size="sm" onClick={() => remove(c.id)}>UsuĹ„</Button>
+                    <Button variant="destructive" size="sm" onClick={() => remove(c.id)}>Usuń</Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -110,7 +108,7 @@ export default function CompetitionsAdminPage() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editing ? "Edytuj konkurencjÄ™" : "Nowa konkurencja"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Edytuj konkurencję" : "Nowa konkurencja"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
               <Label>Nazwa</Label>
@@ -125,7 +123,7 @@ export default function CompetitionsAdminPage() {
               <Select value={form.scoreType} onValueChange={(v) => setForm({ ...form, scoreType: v ?? "points" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="points">Punkty (liczba caĹ‚kowita)</SelectItem>
+                  <SelectItem value="points">Punkty (liczba całkowita)</SelectItem>
                   <SelectItem value="time">Czas (MM:SS)</SelectItem>
                 </SelectContent>
               </Select>
@@ -133,7 +131,7 @@ export default function CompetitionsAdminPage() {
             {form.scoreType === "time" && (
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="lowerIsBetter" checked={form.lowerIsBetter} onChange={(e) => setForm({ ...form, lowerIsBetter: e.target.checked })} className="h-4 w-4" />
-                <Label htmlFor="lowerIsBetter">KrĂłtszy czas = lepszy wynik</Label>
+                <Label htmlFor="lowerIsBetter">Krótszy czas = lepszy wynik</Label>
               </div>
             )}
             <div className="space-y-1">
@@ -141,8 +139,8 @@ export default function CompetitionsAdminPage() {
               <Select value={form.measureMode} onValueChange={(v) => setForm({ ...form, measureMode: v ?? "per_athlete" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="per_athlete">Per zawodnik (kaĹĽdy ma swĂłj wynik)</SelectItem>
-                  <SelectItem value="per_team">Per druĹĽyna (jeden wynik dla caĹ‚ej druĹĽyny)</SelectItem>
+                  <SelectItem value="per_athlete">Per zawodnik (każdy ma swój wynik)</SelectItem>
+                  <SelectItem value="per_team">Per drużyna (jeden wynik dla całej drużyny)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -160,4 +158,3 @@ export default function CompetitionsAdminPage() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 interface Event {
@@ -50,13 +50,13 @@ export default function EventsPage() {
     const body = editing ? { ...form, id: editing.id } : form;
     const r = await fetch("/api/events", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (r.ok) { toast.success(editing ? "Zaktualizowano zawody" : "Utworzono zawody"); setOpen(false); load(); }
-    else toast.error("BĹ‚Ä…d zapisu");
+    else toast.error("Błąd zapisu");
   }
 
   async function remove(id: string) {
-    if (!confirm("UsunÄ…Ä‡ zawody? Spowoduje to usuniÄ™cie wszystkich powiÄ…zanych wynikĂłw.")) return;
+    if (!confirm("Usunąć zawody? Spowoduje to usunięcie wszystkich powiązanych wyników.")) return;
     await fetch(`/api/events?id=${id}`, { method: "DELETE" });
-    toast.success("UsuniÄ™to"); load();
+    toast.success("Usunięto"); load();
   }
 
   return (
@@ -64,7 +64,7 @@ export default function EventsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">Zawody</h1>
-          <p className="text-muted-foreground text-sm mt-1">ZarzÄ…dzaj edycjami zawodĂłw CXC</p>
+          <p className="text-muted-foreground text-sm mt-1">Zarządzaj edycjami zawodów CXC</p>
         </div>
         <Button onClick={openCreate}>+ Nowe zawody</Button>
       </div>
@@ -72,27 +72,27 @@ export default function EventsPage() {
       <div className="space-y-4">
         {events.map((ev) => (
           <Card key={ev.id}>
-            <CardContent className=”p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3”>
-              <div className=”flex-1”>
-                <div className=”flex items-center gap-3 mb-1”>
-                  <span className=”font-semibold text-lg”>{ev.name}</span>
-                  {ev.isActive && <Badge className=”bg-green-600 text-white text-xs”>Aktywne</Badge>}
+            <CardContent className="p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="font-semibold text-lg">{ev.name}</span>
+                  {ev.isActive && <Badge className="bg-green-600 text-white text-xs">Aktywne</Badge>}
                 </div>
-                <div className=”text-sm text-muted-foreground flex flex-wrap gap-3”>
-                  {ev.date && <span>đź”… {ev.date}</span>}
-                  {ev.location && <span>đź”Ť {ev.location}</span>}
+                <div className="text-sm text-muted-foreground flex flex-wrap gap-3">
+                  {ev.date && <span>📅 {ev.date}</span>}
+                  {ev.location && <span>📍 {ev.location}</span>}
                 </div>
               </div>
-              <div className=”flex items-center gap-2 flex-wrap”>
-                <LinkButton variant=”outline” size=”sm” href={`/admin/events/${ev.id}`}>Konfiguruj</LinkButton>
-                <Button variant=”outline” size=”sm” onClick={() => openEdit(ev)}>Edytuj</Button>
-                <Button variant=”destructive” size=”sm” onClick={() => remove(ev.id)}>UsuĹ„</Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <LinkButton variant="outline" size="sm" href={`/admin/events/${ev.id}`}>Konfiguruj</LinkButton>
+                <Button variant="outline" size="sm" onClick={() => openEdit(ev)}>Edytuj</Button>
+                <Button variant="destructive" size="sm" onClick={() => remove(ev.id)}>Usuń</Button>
               </div>
             </CardContent>
           </Card>
         ))}
         {events.length === 0 && (
-          <p className="text-center text-muted-foreground py-16">Brak zawodĂłw. UtwĂłrz pierwszÄ… edycjÄ™.</p>
+          <p className="text-center text-muted-foreground py-16">Brak zawodów. Utwórz pierwszą edycję.</p>
         )}
       </div>
 
@@ -132,4 +132,3 @@ export default function EventsPage() {
     </div>
   );
 }
-
