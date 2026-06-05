@@ -96,9 +96,17 @@ export async function getDashboardScores(): Promise<TeamScore[]> {
       return bVal - aVal;
     });
 
-    sorted.forEach((row, i) => {
-      rankingMap.get(row.team_id)!.set(compId, N - i);
-    });
+    const getValue = (r: RawRow) =>
+      r.score_type === "time" ? r.best_time : r.total_points;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const row = sorted[i];
+      const myValue = getValue(row);
+      // Find the first index in this tie group (Olympic/standard competition ranking)
+      let rank = i;
+      while (rank > 0 && getValue(sorted[rank - 1]) === myValue) rank--;
+      rankingMap.get(row.team_id)!.set(compId, N - rank);
+    }
   }
 
   // Build TeamScore
