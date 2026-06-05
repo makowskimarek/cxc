@@ -9,7 +9,7 @@ type Ctx = { params: Promise<{ eventId: string }> };
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const { eventId } = await params;
   const rows = await db
-    .select({ teamId: eventTeams.teamId, name: teams.name, logoUrl: teams.logoUrl, displayOrder: eventTeams.displayOrder })
+    .select({ id: eventTeams.teamId, name: teams.name, logoUrl: teams.logoUrl, displayOrder: eventTeams.displayOrder })
     .from(eventTeams)
     .leftJoin(teams, eq(eventTeams.teamId, teams.id))
     .where(eq(eventTeams.eventId, eventId))

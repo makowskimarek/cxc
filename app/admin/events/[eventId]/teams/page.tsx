@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { GripVertical } from "lucide-react";
 import {
@@ -66,6 +67,9 @@ export default function EventTeamsPage({ params }: Props) {
   const { eventId } = use(params);
   const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
   const [allTeams, setAllTeams] = useState<Omit<Team, "displayOrder">[]>([]);
+  const [filter, setFilter] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -78,20 +82,61 @@ export default function EventTeamsPage({ params }: Props) {
     ]);
     setAllTeams(all);
     setAssignedTeams([...assigned].sort((a: Team, b: Team) => a.displayOrder - b.displayOrder));
+    setSelectedIds(new Set());
   }
 
   useEffect(() => { load(); }, [eventId]);
 
   const assignedIds = new Set(assignedTeams.map((t) => t.id));
-  const availableTeams = allTeams.filter((t) => !assignedIds.has(t.id));
 
-  async function add(teamId: string) {
-    await fetch(`/api/events/${eventId}/teams`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamId }),
+  const availableTeams = useMemo(() => {
+    const query = filter.trim().toLowerCase();
+    return allTeams.filter(
+      (t) => !assignedIds.has(t.id) && (query === "" || t.name.toLowerCase().includes(query))
+    );
+  }, [allTeams, assignedTeams, filter]);
+
+  const allFilteredSelected =
+    availableTeams.length > 0 && availableTeams.every((t) => selectedIds.has(t.id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
-    toast.success("Dodano drużynę do zawodów");
+  }
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        availableTeams.forEach((t) => next.delete(t.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        availableTeams.forEach((t) => next.add(t.id));
+        return next;
+      });
+    }
+  }
+
+  async function addSelected() {
+    if (selectedIds.size === 0) return;
+    setAdding(true);
+    await Promise.all(
+      [...selectedIds].map((teamId) =>
+        fetch(`/api/events/${eventId}/teams`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId }),
+        })
+      )
+    );
+    setAdding(false);
+    toast.success(`Dodano ${selectedIds.size} ${selectedIds.size === 1 ? "drużynę" : "drużyny"}`);
     load();
   }
 
@@ -127,6 +172,7 @@ export default function EventTeamsPage({ params }: Props) {
       </div>
 
       <div className="max-w-xl space-y-8">
+        {/* Assigned teams with drag-and-drop */}
         {assignedTeams.length > 0 && (
           <section>
             <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
@@ -144,18 +190,63 @@ export default function EventTeamsPage({ params }: Props) {
           </section>
         )}
 
-        {availableTeams.length > 0 && (
+        {/* Available teams with filter + bulk add */}
+        {allTeams.filter((t) => !assignedIds.has(t.id)).length > 0 && (
           <section>
             <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
-              Dostępne
+              Dostępne ({allTeams.filter((t) => !assignedIds.has(t.id)).length})
             </h2>
-            <div className="space-y-2">
-              {availableTeams.map((team) => (
-                <div key={team.id} className="flex items-center justify-between p-4 rounded-lg border-2 border-border">
-                  <span className="font-medium">{team.name}</span>
-                  <Button size="sm" onClick={() => add(team.id)}>Dodaj</Button>
-                </div>
-              ))}
+
+            <div className="space-y-3">
+              <Input
+                placeholder="Szukaj drużyny…"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="h-10"
+              />
+
+              {availableTeams.length > 0 ? (
+                <>
+                  {/* Select all + bulk add bar */}
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground select-none">
+                      <input
+                        type="checkbox"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 rounded accent-primary"
+                      />
+                      Zaznacz wszystkie ({availableTeams.length})
+                    </label>
+                    {selectedIds.size > 0 && (
+                      <Button size="sm" onClick={addSelected} disabled={adding}>
+                        {adding ? "Dodawanie…" : `Dodaj zaznaczone (${selectedIds.size})`}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {availableTeams.map((team) => (
+                      <label
+                        key={team.id}
+                        className="flex items-center gap-3 p-4 rounded-lg border-2 border-border hover:border-primary/40 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(team.id)}
+                          onChange={() => toggleSelect(team.id)}
+                          className="h-4 w-4 rounded accent-primary shrink-0"
+                        />
+                        <span className="flex-1 font-medium">{team.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Brak drużyn pasujących do &quot;{filter}&quot;
+                </p>
+              )}
             </div>
           </section>
         )}
