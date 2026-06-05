@@ -381,7 +381,7 @@ export default function MeasurePage() {
 
       {/* ─── TAB: Zawody ──────────────────────────────────────────────────────── */}
       {activeTab === "events" && (
-        <div className="flex-1 overflow-auto p-5 max-w-lg mx-auto w-full space-y-3">
+        <div className="flex-1 min-h-0 overflow-auto p-5 max-w-lg mx-auto w-full space-y-3">
           {events.length === 0 && (
             <div className="text-center py-16">
               <p className="text-2xl font-bold mb-2">Brak dostępnych zawodów</p>
@@ -425,8 +425,8 @@ export default function MeasurePage() {
         <>
           {/* SETUP */}
           {phase === "setup" && (
-            <div className="flex-1 flex flex-col">
-              <div className="flex-1 overflow-auto p-5 space-y-6 max-w-lg mx-auto w-full pb-28">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-auto p-5 space-y-6 max-w-lg mx-auto w-full pb-28">
 
                 {/* Competition */}
                 <section>
@@ -551,7 +551,7 @@ export default function MeasurePage() {
                   </div>
                 </div>
               </header>
-              <div className="flex-1 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full">
+              <div className="flex-1 min-h-0 overflow-auto p-4 space-y-2 max-w-lg mx-auto w-full">
                 {teamAthletes.map((athlete) => {
                   const stop = athleteStops[athlete.id];
                   if (stop) {
@@ -635,13 +635,13 @@ export default function MeasurePage() {
 
           {/* POINTS ENTRY */}
           {phase === "points_entry" && (
-            <div className="flex-1 flex flex-col">
-              <div className="px-5 py-4 border-b bg-card">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="px-5 py-4 border-b bg-card shrink-0">
                 <button onClick={() => goToSetup("team")} className="text-sm text-muted-foreground mb-1">← Wróć</button>
                 <h2 className="font-bold text-xl">{selectedComp?.name}</h2>
                 <p className="text-muted-foreground">{selectedTeam?.name}</p>
               </div>
-              <div className="flex-1 overflow-auto p-5 space-y-3 max-w-lg mx-auto w-full pb-28">
+              <div className="flex-1 min-h-0 overflow-auto p-5 space-y-3 max-w-lg mx-auto w-full pb-28">
                 {selectedComp?.measureMode === "per_team" ? (
                   <div className="space-y-4 py-8">
                     <label className="text-sm text-muted-foreground block text-center">Wynik drużyny (punkty)</label>
