@@ -15,6 +15,13 @@
       "when": 1779627095803,
       "tag": "0001_blue_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780700826569,
+      "tag": "0002_burly_payback",
+      "breakpoints": true
     }
   ]
 }
