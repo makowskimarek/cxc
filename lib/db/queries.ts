@@ -7,6 +7,9 @@ export interface CompetitionScore {
   displayOrder: number;
   rankingPoints: number;
   hasResult: boolean;
+  scoreType: "points" | "time";
+  rawPoints: number | null;
+  rawTime: number | null;
 }
 
 export interface TeamScore {
@@ -134,6 +137,9 @@ export async function getDashboardScores(): Promise<TeamScore[]> {
       displayOrder: Number(row.display_order),
       rankingPoints,
       hasResult,
+      scoreType: row.score_type,
+      rawPoints: row.total_points !== null ? Number(row.total_points) : null,
+      rawTime: row.best_time !== null ? Number(row.best_time) : null,
     });
 
     team.totalRankingPoints += rankingPoints;

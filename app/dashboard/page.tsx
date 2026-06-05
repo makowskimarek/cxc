@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import useSWR from "swr";
 import { TeamRankingTable } from "@/components/dashboard/TeamRankingTable";
+import { TeamRawResultsTable } from "@/components/dashboard/TeamRawResultsTable";
 import { TeamScore } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+type ViewMode = "ranking" | "raw";
+
 export default function DashboardPage() {
+  const [view, setView] = useState<ViewMode>("ranking");
+
   const { data, isLoading, error } = useSWR<TeamScore[]>("/api/dashboard", fetcher, {
     refreshInterval: 10000,
     revalidateOnFocus: false,
@@ -38,15 +45,41 @@ export default function DashboardPage() {
         )}
         {data && (
           <>
-            <div className="mb-4 flex items-center gap-2">
-              <h2 className="text-xl font-semibold">Ranking drużynowy</h2>
-              <Badge variant="secondary">{data.length} drużyn</Badge>
+            <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">Ranking drużynowy</h2>
+                <Badge variant="secondary">{data.length} drużyn</Badge>
+              </div>
+              <div className="flex rounded-lg border overflow-hidden">
+                <Button
+                  variant={view === "ranking" ? "default" : "ghost"}
+                  size="sm"
+                  className="rounded-none"
+                  onClick={() => setView("ranking")}
+                >
+                  Punkty rankingowe
+                </Button>
+                <Button
+                  variant={view === "raw" ? "default" : "ghost"}
+                  size="sm"
+                  className="rounded-none"
+                  onClick={() => setView("raw")}
+                >
+                  Wyniki pomiarów
+                </Button>
+              </div>
             </div>
             <div className="rounded-xl border bg-card shadow-sm p-2">
-              <TeamRankingTable scores={data} />
+              {view === "ranking" ? (
+                <TeamRankingTable scores={data} />
+              ) : (
+                <TeamRawResultsTable scores={data} />
+              )}
             </div>
             <p className="text-xs text-muted-foreground text-right mt-3">
-              Punkty rankingowe: najlepsza drużyna w dyscyplinie zdobywa maksymalną liczbę punktów.
+              {view === "ranking"
+                ? "Punkty rankingowe: najlepsza drużyna w dyscyplinie zdobywa maksymalną liczbę punktów."
+                : "Wyniki pomiarów: surowe wartości punktów lub czasów uzyskanych przez drużynę."}
             </p>
           </>
         )}
