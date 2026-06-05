@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 function getEmbedUrl(url: string): string | null {
   try {

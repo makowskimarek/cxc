@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
   const activeEvents = await db.select().from(events).where(eq(events.isActive, true)).limit(1);
