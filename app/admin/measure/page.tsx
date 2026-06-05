@@ -293,7 +293,7 @@ export default function MeasurePage() {
   // ─── Full-screen phases (no header/tabs) ──────────────────────────────────
   if (phase === "running" && selectedComp?.measureMode === "per_team") {
     return (
-      <div className="h-[calc(100vh-3.5rem)] md:h-screen bg-black text-white flex flex-col select-none overflow-hidden">
+      <div className="h-[calc(100dvh-3.5rem)] md:h-dvh bg-black text-white flex flex-col select-none overflow-hidden">
         <header className="px-5 py-4 border-b border-white/20">
           <h2 className="font-bold text-lg">{selectedComp?.name}</h2>
           <p className="text-white/60">{selectedTeam?.name}</p>
@@ -321,7 +321,7 @@ export default function MeasurePage() {
 
   // ─── Layout with header + tabs ─────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-3.5rem)] md:h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-[calc(100dvh-3.5rem)] md:h-dvh bg-background flex flex-col overflow-hidden">
 
       {/* Header */}
       <header className="px-5 py-3 border-b bg-card sticky top-0 z-10">

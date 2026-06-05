@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isAdmin = session.user?.role === "admin";
 
   return (
-    <div className="flex h-screen bg-muted/30">
+    <div className="flex h-dvh bg-muted/30">
       <AdminSidebar
         userName={session.user?.name ?? ""}
         userRole={session.user?.role ?? ""}
