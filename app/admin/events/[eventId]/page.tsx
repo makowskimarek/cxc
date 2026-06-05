@@ -20,7 +20,7 @@ export default async function EventDetailPage({ params }: Props) {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-8">
         <Link href="/admin/events" className="text-sm text-muted-foreground hover:text-foreground">← Wszystkie zawody</Link>
         <h1 className="text-2xl font-bold mt-2">{event.name}</h1>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -52,31 +52,31 @@ export default function UsersPage() {
       body: JSON.stringify(body),
     });
     if (r.ok) { toast.success("Zapisano"); setOpen(false); load(); }
-    else { const err = await r.json(); toast.error(err.error ?? "Błąd"); }
+    else { const err = await r.json(); toast.error(err.error ?? "BĹ‚Ä…d"); }
   }
 
   async function remove(id: string) {
-    if (!confirm("Usunąć użytkownika?")) return;
+    if (!confirm("UsunÄ…Ä‡ uĹĽytkownika?")) return;
     const r = await fetch(`/api/users?id=${id}`, { method: "DELETE" });
-    if (r.ok) { toast.success("Usunięto"); load(); }
+    if (r.ok) { toast.success("UsuniÄ™to"); load(); }
     else { const err = await r.json(); toast.error(err.error); }
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Użytkownicy</h1>
-          <p className="text-muted-foreground text-sm mt-1">Konta administratorów i sędziów</p>
+          <h1 className="text-2xl font-bold">UĹĽytkownicy</h1>
+          <p className="text-muted-foreground text-sm mt-1">Konta administratorĂłw i sÄ™dziĂłw</p>
         </div>
-        <Button onClick={openCreate}>+ Nowy użytkownik</Button>
+        <Button onClick={openCreate}>+ Nowy uĹĽytkownik</Button>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Imię i nazwisko</TableHead>
+              <TableHead>ImiÄ™ i nazwisko</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Rola</TableHead>
               <TableHead className="w-32 text-right">Akcje</TableHead>
@@ -93,22 +93,22 @@ export default function UsersPage() {
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => openEdit(u)}>Edytuj</Button>
-                    <Button variant="destructive" size="sm" onClick={() => remove(u.id)}>Usuń</Button>
+                    <Button variant="destructive" size="sm" onClick={() => remove(u.id)}>UsuĹ„</Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        {users.length === 0 && <p className="text-center text-muted-foreground py-12">Brak użytkowników.</p>}
+        {users.length === 0 && <p className="text-center text-muted-foreground py-12">Brak uĹĽytkownikĂłw.</p>}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editing ? "Edytuj użytkownika" : "Nowy użytkownik"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Edytuj uĹĽytkownika" : "Nowy uĹĽytkownik"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label>Imię i nazwisko</Label>
+              <Label>ImiÄ™ i nazwisko</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             {!editing && (
@@ -118,7 +118,7 @@ export default function UsersPage() {
               </div>
             )}
             <div className="space-y-1">
-              <Label>{editing ? "Nowe hasło (zostaw puste bez zmian)" : "Hasło"}</Label>
+              <Label>{editing ? "Nowe hasĹ‚o (zostaw puste bez zmian)" : "HasĹ‚o"}</Label>
               <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </div>
             <div className="space-y-1">
@@ -126,7 +126,7 @@ export default function UsersPage() {
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v ?? "judge" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="judge">Sędzia</SelectItem>
+                  <SelectItem value="judge">SÄ™dzia</SelectItem>
                   <SelectItem value="admin">Administrator</SelectItem>
                 </SelectContent>
               </Select>
@@ -141,3 +141,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

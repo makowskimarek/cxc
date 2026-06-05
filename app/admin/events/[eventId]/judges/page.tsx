@@ -46,7 +46,7 @@ export default function EventJudgesPage({ params }: Props) {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
         <Link href={`/admin/events/${eventId}`} className="text-sm text-muted-foreground hover:text-foreground">← Zawody</Link>
         <h1 className="text-2xl font-bold mt-2">Sędziowie zawodów</h1>
