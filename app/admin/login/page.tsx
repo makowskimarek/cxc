@@ -29,7 +29,7 @@ export default function LoginPage() {
     if (result?.error) {
       setError("Nieprawidłowy email lub hasło.");
     } else {
-      router.push("/admin/events");
+      window.location.href = "/admin";
     }
   }
 
