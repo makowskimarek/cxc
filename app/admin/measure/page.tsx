@@ -321,7 +321,7 @@ export default function MeasurePage() {
 
   // ─── Layout with header + tabs ─────────────────────────────────────────────
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] md:min-h-screen bg-background flex flex-col">
+    <div className="h-[calc(100vh-3.5rem)] md:h-screen bg-background flex flex-col overflow-hidden">
 
       {/* Header */}
       <header className="px-5 py-3 border-b bg-card sticky top-0 z-10">
@@ -337,35 +337,11 @@ export default function MeasurePage() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mt-3">
-          <button
-            onClick={() => setActiveTab("events")}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === "events" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            Zawody
-          </button>
-          <button
-            onClick={() => { if (selectedEventId) setActiveTab("measure"); }}
-            disabled={!selectedEventId}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeTab === "measure"
-                ? "bg-primary text-primary-foreground"
-                : selectedEventId
-                ? "text-muted-foreground hover:bg-muted"
-                : "text-muted-foreground/40 cursor-not-allowed"
-            }`}
-          >
-            Pomiar
-          </button>
-        </div>
       </header>
 
       {/* ─── TAB: Zawody ──────────────────────────────────────────────────────── */}
       {activeTab === "events" && (
-        <div className="flex-1 p-5 max-w-lg mx-auto w-full space-y-3">
+        <div className="flex-1 overflow-auto p-5 max-w-lg mx-auto w-full space-y-3">
           {events.length === 0 && (
             <div className="text-center py-16">
               <p className="text-2xl font-bold mb-2">Brak dostępnych zawodów</p>
